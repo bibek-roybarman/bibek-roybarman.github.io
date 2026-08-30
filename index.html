@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EE '29 | Embedded Systems & Hardware Design</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    /* ─── FONTS ─────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+
+    /* ─── CSS VARIABLES ──────────────────────────────────── */
+    :root {
+      --bg:        #0a2915;
+      --bg2:       #0d3319;
+      --gold:      #d4af37;
+      --gold-dim:  #a8872a;
+      --gold-glow: rgba(212,175,55,0.35);
+      --white:     #f0f4f0;
+      --dim:       rgba(240,244,240,0.55);
+      --trace:     rgba(212,175,55,0.12);
+      --node-bg:   #0f3d1c;
+    }
+
+    /* ─── RESET / BASE ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── PCB BACKGROUND ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        /* horizontal traces */
+        repeating-linear-gradient(0deg,   transparent, transparent 59px, var(--trace) 59px, var(--trace) 60px),
+        /* vertical traces */
+        repeating-linear-gradient(90deg,  transparent, transparent 59px, var(--trace) 59px, var(--trace) 60px),
+        /* diagonal accent */
+        repeating-linear-gradient(45deg,  transparent, transparent 119px, rgba(212,175,55,0.04) 119px, rgba(212,175,55,0.04) 120px);
+      pointer-events: none;
+    }
+
+    /* Via dots at grid intersections */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image: radial-gradient(circle, rgba(212,175,55,0.18) 1.5px, transparent 1.5px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* ─── SCROLLBAR ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+    /* ─── UTILITY ────────────────────────────────────────── */
+    .mono  { font-family: 'Share Tech Mono', monospace; }
+    .orb   { font-family: 'Orbitron', monospace; }
+    .gold  { color: var(--gold); }
+    .z1    { position: relative; z-index: 1; }
+
+    /* ─── NAV ────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 2.5rem;
+      background: rgba(10,41,21,0.82);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(212,175,55,0.25);
+    }
+    nav .logo { font-family:'Orbitron',monospace; font-size:1rem; color:var(--gold); letter-spacing:.15em; }
+    nav ul { display:flex; gap:2rem; list-style:none; }
+    nav ul li a {
+      font-family:'Share Tech Mono',monospace; font-size:.82rem;
+      color:var(--dim); text-decoration:none; letter-spacing:.08em;
+      transition: color .25s;
+    }
+    nav ul li a:hover { color:var(--gold); }
+    .nav-dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--gold);
+      margin-right: 5px; vertical-align: middle;
+      box-shadow: 0 0 6px var(--gold);
+    }
+
+    /* ─── HERO ───────────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 6rem 2rem 2rem;
+      position: relative; overflow: hidden;
+    }
+    .hero-inner { text-align: center; position: relative; z-index: 2; }
+
+    /* Animated PCB chip silhouette behind hero text */
+    .chip-bg {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: min(560px, 90vw); height: min(560px, 90vw);
+      opacity: .06;
+      z-index: 1;
+    }
+
+    .hero-tag {
+      font-family:'Share Tech Mono',monospace;
+      font-size:.82rem; color:var(--gold); letter-spacing:.25em;
+      border: 1px solid rgba(212,175,55,.35);
+      display:inline-block; padding:.3rem 1.2rem; border-radius:2px;
+      margin-bottom:1.8rem;
+      background: rgba(212,175,55,.07);
+      animation: fadeDown .8s ease both;
+    }
+    .hero-name {
+      font-family:'Orbitron',monospace;
+      font-size: clamp(2.4rem, 7vw, 5.2rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: .04em;
+      color: var(--white);
+      animation: fadeDown .9s .15s ease both;
+    }
+    .hero-name span { color: var(--gold); }
+    .hero-sub {
+      font-family:'Share Tech Mono',monospace;
+      font-size: clamp(.85rem, 2vw, 1.15rem);
+      color: var(--dim);
+      margin-top: 1.2rem;
+      letter-spacing: .12em;
+      animation: fadeDown 1s .3s ease both;
+    }
+
+    /* Typewriter cursor */
+    .cursor { animation: blink 1s step-end infinite; color: var(--gold); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .hero-btns {
+      display: flex; gap: 1.2rem; justify-content: center; margin-top: 2.8rem;
+      animation: fadeDown 1s .45s ease both;
+    }
+    .btn-primary {
+      font-family:'Share Tech Mono',monospace; font-size:.85rem;
+      padding:.65rem 1.8rem; border-radius:3px;
+      background: var(--gold); color: #0a2915; font-weight: 700;
+      border: none; cursor: pointer; letter-spacing: .1em;
+      transition: box-shadow .25s, transform .2s;
+      text-decoration: none; display:inline-block;
+    }
+    .btn-primary:hover { box-shadow: 0 0 22px var(--gold-glow); transform: translateY(-2px); }
+    .btn-outline {
+      font-family:'Share Tech Mono',monospace; font-size:.85rem;
+      padding:.65rem 1.8rem; border-radius:3px;
+      background: transparent; color: var(--gold);
+      border: 1px solid rgba(212,175,55,.6); cursor: pointer; letter-spacing: .1em;
+      transition: background .25s, box-shadow .25s, transform .2s;
+      text-decoration: none; display:inline-block;
+    }
+    .btn-outline:hover { background: rgba(212,175,55,.1); box-shadow: 0 0 16px var(--gold-glow); transform: translateY(-2px); }
+
+    /* scroll cue */
+    .scroll-cue {
+      position: absolute; bottom: 2.2rem; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: .4rem;
+      font-family:'Share Tech Mono',monospace; font-size:.68rem;
+      color:rgba(212,175,55,.5); letter-spacing:.15em;
+      animation: fadeIn 2s 1.2s ease both;
+    }
+    .scroll-cue svg { animation: bounceY 1.6s ease-in-out infinite; }
+    @keyframes bounceY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+    /* ─── SECTION SHARED ─────────────────────────────────── */
+    section { padding: 6rem 1.5rem; position: relative; z-index: 1; }
+    .section-label {
+      font-family:'Share Tech Mono',monospace;
+      font-size:.72rem; color:var(--gold); letter-spacing:.3em;
+      margin-bottom:.5rem;
+    }
+    .section-title {
+      font-family:'Orbitron',monospace;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700; color: var(--white);
+      margin-bottom: .6rem;
+    }
+    .section-rule {
+      width: 80px; height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      margin-bottom: 3rem;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ─── ABOUT ──────────────────────────────────────────── */
+    #about { background: rgba(13,51,25,0.45); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem; align-items: center;
+    }
+    @media(max-width:720px){ .about-grid{ grid-template-columns:1fr; } }
+    .about-img-wrap {
+      position: relative;
+      border: 1px solid rgba(212,175,55,.3);
+      border-radius: 4px; overflow: hidden;
+    }
+    .about-img-wrap img { width: 100%; display: block; filter: saturate(.7) brightness(.9); }
+    .about-img-wrap::after {
+      content:'';
+      position:absolute; inset:0;
+      background: linear-gradient(135deg, rgba(10,41,21,.5), transparent 60%);
+      pointer-events:none;
+    }
+    /* Corner markers */
+    .corner {
+      position: absolute; width: 14px; height: 14px;
+      border-color: var(--gold); border-style: solid;
+      border-width: 0; z-index: 3;
+    }
+    .corner.tl { top:8px; left:8px; border-top-width:2px; border-left-width:2px; }
+    .corner.tr { top:8px; right:8px; border-top-width:2px; border-right-width:2px; }
+    .corner.bl { bottom:8px; left:8px; border-bottom-width:2px; border-left-width:2px; }
+    .corner.br { bottom:8px; right:8px; border-bottom-width:2px; border-right-width:2px; }
+
+    .about-text p {
+      font-size:.97rem; line-height:1.85; color:var(--dim);
+      margin-bottom:1.1rem;
+    }
+    .about-text p span { color: var(--gold); }
+
+    /* Stats row */
+    .stat-row { display:flex; gap:2rem; margin-top:2rem; flex-wrap:wrap; }
+    .stat-box {
+      border: 1px solid rgba(212,175,55,.25);
+      border-radius: 4px;
+      padding: .8rem 1.4rem;
+      background: rgba(212,175,55,.05);
+      text-align: center; min-width: 90px;
+    }
+    .stat-box .num {
+      font-family:'Orbitron',monospace; font-size:1.6rem;
+      color:var(--gold); font-weight:700;
+    }
+    .stat-box .lbl {
+      font-family:'Share Tech Mono',monospace; font-size:.68rem;
+      color:var(--dim); letter-spacing:.12em; margin-top:.15rem;
+    }
+
+    /* ─── SKILLS / CIRCUIT ───────────────────────────────── */
+    #skills { position:relative; }
+    .circuit-canvas-wrap {
+      width:100%; overflow-x:auto;
+      display:flex; justify-content:center;
+      padding: 1rem 0 2rem;
+    }
+    .circuit-svg { max-width: 900px; width: 100%; height: auto; }
+
+    /* ─── INTERESTS ──────────────────────────────────────── */
+    #interests { background: rgba(13,51,25,0.45); }
+    .interests-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.6rem;
+    }
+    .interest-card {
+      border: 1px solid rgba(212,175,55,.22);
+      border-radius: 6px;
+      background: rgba(15,61,28,.6);
+      padding: 1.8rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform .3s, box-shadow .3s;
+    }
+    .interest-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 28px rgba(212,175,55,.18), 0 4px 20px rgba(0,0,0,.4);
+    }
+    .interest-card::before {
+      content:'';
+      position:absolute; top:0; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .interest-card .ic-label {
+      font-family:'Share Tech Mono',monospace; font-size:.68rem;
+      color:rgba(212,175,55,.55); letter-spacing:.2em; margin-bottom:.6rem;
+    }
+    .interest-card .ic-title {
+      font-family:'Orbitron',monospace; font-size:1.1rem;
+      color:var(--gold); font-weight:700; margin-bottom:.8rem;
+    }
+    .interest-card .ic-desc {
+      font-size:.88rem; line-height:1.75; color:var(--dim);
+    }
+    .interest-card .ic-icon {
+      font-size:2rem; margin-bottom:1rem;
+      filter: drop-shadow(0 0 6px var(--gold-dim));
+    }
+    /* Circuit trace decoration */
+    .interest-card .trace-deco {
+      position:absolute; bottom:12px; right:14px;
+      font-family:'Share Tech Mono',monospace; font-size:.6rem;
+      color:rgba(212,175,55,.15); letter-spacing:.05em;
+    }
+
+    /* ─── PROJECTS ───────────────────────────────────────── */
+    #projects {}
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 1.8rem;
+    }
+    /* Microchip Datasheet Card */
+    .project-card {
+      border: 1px solid rgba(212,175,55,.28);
+      border-radius: 4px;
+      background: #0b3018;
+      position: relative; overflow: hidden;
+      transition: transform .3s, box-shadow .3s;
+      display: flex; flex-direction: column;
+    }
+    .project-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 0 36px rgba(212,175,55,.2), 0 8px 28px rgba(0,0,0,.5);
+    }
+    /* Chip pin indicators on left side */
+    .card-pins {
+      display: flex; flex-direction: column;
+      gap: 10px; padding: 28px 0;
+      position: absolute; left: 0; top: 0; bottom: 0;
+      align-items: flex-start;
+    }
+    .pin {
+      width: 18px; height: 5px;
+      background: var(--gold-dim);
+      border-radius: 0 2px 2px 0;
+      position: relative;
+    }
+    .pin::after {
+      content:'';
+      position:absolute; right:-6px; top:50%;
+      transform:translateY(-50%);
+      width:6px; height:1px;
+      background: rgba(212,175,55,.4);
+    }
+    .card-pins-right {
+      display: flex; flex-direction: column;
+      gap: 10px; padding: 28px 0;
+      position: absolute; right: 0; top: 0; bottom: 0;
+      align-items: flex-end;
+    }
+    .pin-r {
+      width: 18px; height: 5px;
+      background: var(--gold-dim);
+      border-radius: 2px 0 0 2px;
+    }
+    .card-body {
+      margin: 0 22px;
+      padding: 1.4rem 1rem;
+      flex: 1;
+    }
+    .card-header-bar {
+      background: rgba(212,175,55,.1);
+      border-bottom: 1px solid rgba(212,175,55,.2);
+      padding: .5rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 0 22px;
+    }
+    .card-part-num {
+      font-family:'Share Tech Mono',monospace; font-size:.68rem;
+      color:var(--gold); letter-spacing:.15em;
+    }
+    .card-rev {
+      font-family:'Share Tech Mono',monospace; font-size:.62rem;
+      color:var(--dim); letter-spacing:.1em;
+    }
+    .card-chip-icon {
+      width: 56px; height: 56px;
+      border: 2px solid rgba(212,175,55,.4);
+      border-radius: 4px;
+      display: flex; align-items:center; justify-content:center;
+      margin-bottom: 1rem;
+      background: rgba(212,175,55,.06);
+      font-size: 1.5rem;
+      position: relative;
+    }
+    .card-chip-icon::after {
+      content:'';
+      position:absolute; inset:-4px;
+      border:1px dashed rgba(212,175,55,.2);
+      border-radius:6px;
+    }
+    .card-title {
+      font-family:'Orbitron',monospace; font-size:1rem;
+      color:var(--white); font-weight:700;
+      margin-bottom:.5rem;
+    }
+    .card-desc {
+      font-size:.83rem; line-height:1.7; color:var(--dim);
+      margin-bottom: 1.1rem;
+    }
+    .card-tags {
+      display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1.2rem;
+    }
+    .tag {
+      font-family:'Share Tech Mono',monospace; font-size:.65rem;
+      padding:.2rem .6rem; border-radius:2px;
+      background: rgba(212,175,55,.1);
+      color:var(--gold); border: 1px solid rgba(212,175,55,.25);
+      letter-spacing:.08em;
+    }
+    .card-status {
+      font-family:'Share Tech Mono',monospace; font-size:.68rem;
+      color:var(--dim); display:flex; align-items:center; gap:.5rem;
+    }
+    .status-dot {
+      width:7px; height:7px; border-radius:50%;
+      background:#4ade80; box-shadow: 0 0 6px #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .status-dot.yellow { background: #facc15; box-shadow: 0 0 6px #facc15; }
+    .status-dot.dim    { background: var(--dim); box-shadow: none; animation:none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .card-footer {
+      border-top: 1px solid rgba(212,175,55,.15);
+      padding: .8rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 0 22px;
+    }
+    .card-link {
+      font-family:'Share Tech Mono',monospace; font-size:.72rem;
+      color:var(--gold); text-decoration:none; letter-spacing:.1em;
+      transition: text-shadow .25s;
+    }
+    .card-link:hover { text-shadow: 0 0 10px var(--gold); }
+
+    /* ─── CONTACT ────────────────────────────────────────── */
+    #contact { background: rgba(13,51,25,0.45); }
+    .contact-wrap {
+      max-width: 680px; margin: 0 auto; text-align: center;
+    }
+    .contact-wrap p {
+      font-size:.95rem; color:var(--dim); line-height:1.8;
+      margin-bottom:2.4rem;
+    }
+    .contact-links {
+      display:flex; flex-wrap:wrap; gap:1rem; justify-content:center;
+    }
+    .contact-link {
+      font-family:'Share Tech Mono',monospace; font-size:.82rem;
+      padding:.7rem 1.8rem; border-radius:3px;
+      border: 1px solid rgba(212,175,55,.4);
+      color:var(--gold); text-decoration:none; letter-spacing:.1em;
+      background: rgba(212,175,55,.06);
+      transition: all .25s; display:flex; align-items:center; gap:.6rem;
+    }
+    .contact-link:hover {
+      background: rgba(212,175,55,.14);
+      box-shadow: 0 0 20px var(--gold-glow);
+      transform: translateY(-2px);
+    }
+    .contact-form {
+      max-width:680px; margin:3rem auto 0;
+      display:grid; gap:1rem;
+    }
+    .cf-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media(max-width:520px){ .cf-row{grid-template-columns:1fr;} }
+    .cf-input {
+      font-family:'Share Tech Mono',monospace; font-size:.85rem;
+      padding:.75rem 1rem; border-radius:3px;
+      background: rgba(15,61,28,.8); color:var(--white);
+      border: 1px solid rgba(212,175,55,.25);
+      outline:none; letter-spacing:.06em;
+      transition: border-color .25s, box-shadow .25s;
+      width:100%;
+    }
+    .cf-input:focus { border-color:var(--gold); box-shadow:0 0 12px rgba(212,175,55,.2); }
+    .cf-input::placeholder { color:rgba(240,244,240,.3); }
+    textarea.cf-input { resize:vertical; min-height:130px; }
+    .cf-submit {
+      font-family:'Share Tech Mono',monospace; font-size:.85rem;
+      padding:.75rem 2rem; border-radius:3px;
+      background: var(--gold); color:#0a2915; font-weight:700;
+      border:none; cursor:pointer; letter-spacing:.12em;
+      transition: box-shadow .25s, transform .2s;
+      justify-self:start;
+    }
+    .cf-submit:hover { box-shadow:0 0 22px var(--gold-glow); transform:translateY(-2px); }
+
+    /* ─── FOOTER ─────────────────────────────────────────── */
+    footer {
+      border-top:1px solid rgba(212,175,55,.15);
+      padding:2rem 2rem; text-align:center;
+      font-family:'Share Tech Mono',monospace; font-size:.72rem;
+      color:rgba(240,244,240,.3); letter-spacing:.1em;
+      position:relative; z-index:1;
+    }
+    footer span { color:rgba(212,175,55,.5); }
+
+    /* ─── SCROLL ANIMATIONS ──────────────────────────────── */
+    .reveal {
+      opacity:0; transform:translateY(36px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+    .reveal-left { opacity:0; transform:translateX(-36px); transition:opacity .7s ease,transform .7s ease; }
+    .reveal-left.visible { opacity:1; transform:translateX(0); }
+    .reveal-right { opacity:0; transform:translateX(36px); transition:opacity .7s ease,transform .7s ease; }
+    .reveal-right.visible { opacity:1; transform:translateX(0); }
+
+    /* Stagger children */
+    .stagger > * { opacity:0; transform:translateY(28px); transition:opacity .6s ease,transform .6s ease; }
+    .stagger.visible > *:nth-child(1){transition-delay:.05s}
+    .stagger.visible > *:nth-child(2){transition-delay:.15s}
+    .stagger.visible > *:nth-child(3){transition-delay:.25s}
+    .stagger.visible > *:nth-child(4){transition-delay:.35s}
+    .stagger.visible > *:nth-child(5){transition-delay:.45s}
+    .stagger.visible > *:nth-child(6){transition-delay:.55s}
+    .stagger.visible > * { opacity:1; transform:translateY(0); }
+
+    /* ─── HERO ANIMATIONS ────────────────────────────────── */
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn   { from{opacity:0}to{opacity:1} }
+
+    /* ─── FLOATING PARTICLES (circuit nodes) ─────────────── */
+    .particles { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+    .particle {
+      position:absolute;
+      width:4px; height:4px; border-radius:50%;
+      background:var(--gold);
+      box-shadow:0 0 8px var(--gold);
+      animation: floatParticle var(--dur,8s) var(--delay,0s) ease-in-out infinite;
+      opacity:.6;
+    }
+    @keyframes floatParticle {
+      0%   { transform:translateY(0) translateX(0); opacity:.6; }
+      33%  { transform:translateY(-20px) translateX(12px); opacity:.3; }
+      66%  { transform:translateY(-8px) translateX(-8px); opacity:.7; }
+      100% { transform:translateY(0) translateX(0); opacity:.6; }
+    }
+
+    /* ─── PCB SKILL NODES ────────────────────────────────── */
+    .skill-node {
+      cursor:default;
+      transition:filter .3s;
+    }
+    .skill-node:hover .node-circle { filter:brightness(1.4); }
+    .skill-node:hover .node-label { fill:#fff; }
+
+    /* Mobile nav toggle */
+    .nav-toggle { display:none; background:none; border:1px solid rgba(212,175,55,.4); 
+      color:var(--gold); padding:.3rem .7rem; cursor:pointer; border-radius:3px;
+      font-family:'Share Tech Mono',monospace; font-size:.8rem; }
+    @media(max-width:640px){
+      .nav-toggle{display:block;}
+      nav ul { display:none; position:absolute; top:100%; left:0; right:0;
+        background:rgba(10,41,21,.97); flex-direction:column; padding:1rem 2.5rem;
+        border-bottom:1px solid rgba(212,175,55,.2); gap:1rem; }
+      nav ul.open{display:flex;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ NAV ════════════════════════════════ -->
+<nav>
+  <div class="logo">⚡ EE_PORT</div>
+  <button class="nav-toggle" onclick="toggleNav()">MENU</button>
+  <ul id="nav-list">
+    <li><a href="#about"><span class="nav-dot"></span>ABOUT</a></li>
+    <li><a href="#skills"><span class="nav-dot"></span>SKILLS</a></li>
+    <li><a href="#interests"><span class="nav-dot"></span>INTERESTS</a></li>
+    <li><a href="#projects"><span class="nav-dot"></span>PROJECTS</a></li>
+    <li><a href="#contact"><span class="nav-dot"></span>CONTACT</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
+<section id="hero">
+  <!-- Floating particles -->
+  <div class="particles" id="particles"></div>
+
+  <!-- PCB chip silhouette SVG -->
+  <svg class="chip-bg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="80" y="80" width="240" height="240" rx="8" stroke="#d4af37" stroke-width="3"/>
+    <!-- pins left -->
+    <line x1="80" y1="120" x2="30" y2="120" stroke="#d4af37" stroke-width="4"/>
+    <line x1="80" y1="150" x2="30" y2="150" stroke="#d4af37" stroke-width="4"/>
+    <line x1="80" y1="180" x2="30" y2="180" stroke="#d4af37" stroke-width="4"/>
+    <line x1="80" y1="210" x2="30" y2="210" stroke="#d4af37" stroke-width="4"/>
+    <line x1="80" y1="240" x2="30" y2="240" stroke="#d4af37" stroke-width="4"/>
+    <line x1="80" y1="270" x2="30" y2="270" stroke="#d4af37" stroke-width="4"/>
+    <!-- pins right -->
+    <line x1="320" y1="120" x2="370" y2="120" stroke="#d4af37" stroke-width="4"/>
+    <line x1="320" y1="150" x2="370" y2="150" stroke="#d4af37" stroke-width="4"/>
+    <line x1="320" y1="180" x2="370" y2="180" stroke="#d4af37" stroke-width="4"/>
+    <line x1="320" y1="210" x2="370" y2="210" stroke="#d4af37" stroke-width="4"/>
+    <line x1="320" y1="240" x2="370" y2="240" stroke="#d4af37" stroke-width="4"/>
+    <line x1="320" y1="270" x2="370" y2="270" stroke="#d4af37" stroke-width="4"/>
+    <!-- pins top -->
+    <line x1="130" y1="80" x2="130" y2="30" stroke="#d4af37" stroke-width="4"/>
+    <line x1="165" y1="80" x2="165" y2="30" stroke="#d4af37" stroke-width="4"/>
+    <line x1="200" y1="80" x2="200" y2="30" stroke="#d4af37" stroke-width="4"/>
+    <line x1="235" y1="80" x2="235" y2="30" stroke="#d4af37" stroke-width="4"/>
+    <line x1="270" y1="80" x2="270" y2="30" stroke="#d4af37" stroke-width="4"/>
+    <!-- pins bottom -->
+    <line x1="130" y1="320" x2="130" y2="370" stroke="#d4af37" stroke-width="4"/>
+    <line x1="165" y1="320" x2="165" y2="370" stroke="#d4af37" stroke-width="4"/>
+    <line x1="200" y1="320" x2="200" y2="370" stroke="#d4af37" stroke-width="4"/>
+    <line x1="235" y1="320" x2="235" y2="370" stroke="#d4af37" stroke-width="4"/>
+    <line x1="270" y1="320" x2="270" y2="370" stroke="#d4af37" stroke-width="4"/>
+    <!-- inner detail -->
+    <rect x="120" y="120" width="160" height="160" rx="4" stroke="#d4af37" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <circle cx="200" cy="200" r="30" stroke="#d4af37" stroke-width="1.5"/>
+    <text x="200" y="205" text-anchor="middle" font-family="monospace" font-size="14" fill="#d4af37">μC</text>
+    <!-- notch -->
+    <circle cx="100" cy="100" r="6" fill="#d4af37" opacity=".8"/>
+  </svg>
+
+  <div class="hero-inner">
+    <div class="hero-tag">// PORTFOLIO.v2025 — INITIALIZED</div>
+    <h1 class="hero-name">Alex<span> Rivera</span></h1>
+    <p class="hero-sub" id="hero-sub">EE '29 | Embedded Systems &amp; Hardware Design<span class="cursor">_</span></p>
+    <div class="hero-btns">
+      <a href="#projects" class="btn-primary">VIEW PROJECTS</a>
+      <a href="#contact" class="btn-outline">CONTACT</a>
+    </div>
+  </div>
+
+  <div class="scroll-cue">
+    <span>SCROLL</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ ABOUT ══════════════════════════════ -->
+<section id="about">
+  <div class="container">
+    <p class="section-label reveal">// SECTION_01</p>
+    <h2 class="section-title reveal">About Me</h2>
+    <div class="section-rule reveal"></div>
+    <div class="about-grid">
+      <div class="about-img-wrap reveal-left">
+        <img
+          src="https://images.pexels.com/photos/18372336/pexels-photo-18372336.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200"
+          alt="PCB circuit board — representing hardware focus"
+          loading="lazy"
+        />
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+      </div>
+      <div class="about-text reveal-right">
+        <p>
+          Hi — I'm <span>Alex Rivera</span>, a first-year Electrical Engineering student (<span>EE '29</span>) 
+          passionate about bridging the gap between low-level hardware and intelligent software systems.
+        </p>
+        <p>
+          My focus areas include <span>Embedded Systems</span>, <span>PCB Design</span>, and 
+          <span>Digital Logic</span>. I love designing circuits from schematic capture all the way 
+          to fabrication using tools like <span>KiCAD</span>.
+        </p>
+        <p>
+          When I'm not soldering prototypes, I'm writing firmware in <span>C/C++</span> or 
+          exploring the intersection of <span>VLSI design</span> and modern IoT architectures.
+        </p>
+        <div class="stat-row stagger">
+          <div class="stat-box">
+            <div class="num">12+</div>
+            <div class="lbl">PROJECTS</div>
+          </div>
+          <div class="stat-box">
+            <div class="num">4</div>
+            <div class="lbl">LANGUAGES</div>
+          </div>
+          <div class="stat-box">
+            <div class="num">3</div>
+            <div class="lbl">PCB DESIGNS</div>
+          </div>
+          <div class="stat-box">
+            <div class="num">∞</div>
+            <div class="lbl">CURIOSITY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ SKILLS ═════════════════════════════ -->
+<section id="skills">
+  <div class="container">
+    <p class="section-label reveal">// SECTION_02</p>
+    <h2 class="section-title reveal">Skills — Circuit Diagram</h2>
+    <div class="section-rule reveal"></div>
+    <p class="mono reveal" style="font-size:.8rem;color:var(--dim);margin-bottom:2rem;letter-spacing:.08em;">
+      /* Hover nodes to highlight — each node is a proficiency connection */
+    </p>
+    <div class="circuit-canvas-wrap reveal">
+      <!-- SKILL CIRCUIT SVG -->
+      <svg class="circuit-svg" viewBox="0 0 860 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- grid faint lines -->
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(212,175,55,0.06)" stroke-width="1"/>
+          </pattern>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="860" height="380" fill="url(#grid)"/>
+
+        <!-- Power rail top -->
+        <line x1="30" y1="40" x2="830" y2="40" stroke="#d4af37" stroke-width="1.5" stroke-dasharray="6 3" opacity=".3"/>
+        <text x="32" y="35" font-family="'Share Tech Mono'" font-size="10" fill="rgba(212,175,55,.45)" letter-spacing="2">VCC (+5V)</text>
+        <!-- GND rail bottom -->
+        <line x1="30" y1="340" x2="830" y2="340" stroke="#d4af37" stroke-width="1.5" stroke-dasharray="6 3" opacity=".3"/>
+        <text x="32" y="355" font-family="'Share Tech Mono'" font-size="10" fill="rgba(212,175,55,.45)" letter-spacing="2">GND</text>
+
+        <!-- ── CENTRAL MCU BLOCK ── -->
+        <rect x="330" y="130" width="200" height="120" rx="6"
+          fill="#0f3d1c" stroke="#d4af37" stroke-width="1.8"/>
+        <!-- inner detail lines -->
+        <line x1="330" y1="160" x2="530" y2="160" stroke="rgba(212,175,55,.15)" stroke-width="1"/>
+        <line x1="330" y1="220" x2="530" y2="220" stroke="rgba(212,175,55,.15)" stroke-width="1"/>
+        <text x="430" y="153" text-anchor="middle" font-family="'Share Tech Mono'" font-size="9" fill="rgba(212,175,55,.5)" letter-spacing="3">PART NO.</text>
+        <text x="430" y="163" text-anchor="middle" font-family="'Share Tech Mono'" font-size="8" fill="rgba(212,175,55,.35)">EE-MCU-2025</text>
+        <text x="430" y="198" text-anchor="middle" font-family="'Orbitron'" font-size="14" fill="#d4af37" font-weight="700" letter-spacing="2">CORE</text>
+        <text x="430" y="215" text-anchor="middle" font-family="'Share Tech Mono'" font-size="9" fill="rgba(240,244,240,.5)" letter-spacing="1.5">ALEX RIVERA</text>
+        <text x="430" y="235" text-anchor="middle" font-family="'Share Tech Mono'" font-size="8" fill="rgba(212,175,55,.4)">EE ʼ29</text>
+        <!-- notch -->
+        <circle cx="346" cy="146" r="5" fill="#d4af37" opacity=".6"/>
+
+        <!-- Vertical lines to power rails from MCU -->
+        <line x1="430" y1="40" x2="430" y2="130" stroke="rgba(212,175,55,.25)" stroke-width="1.2"/>
+        <line x1="430" y1="250" x2="430" y2="340" stroke="rgba(212,175,55,.25)" stroke-width="1.2"/>
+
+        <!-- ── TRACES (horizontal + right-angle routing) ── -->
+        <!-- C trace -->
+        <polyline points="140,190 330,190" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- Python trace -->
+        <polyline points="140,140 280,140 280,165 330,165" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- MATLAB trace -->
+        <polyline points="140,250 280,250 280,220 330,220" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- KiCAD trace -->
+        <polyline points="140,310 200,310 200,300 290,300 290,240 330,240" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- Verilog trace -->
+        <polyline points="720,165 530,165" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- Git trace -->
+        <polyline points="720,190 580,190 580,190 530,190" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- Linux trace -->
+        <polyline points="720,220 580,220 580,220 530,220" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <!-- SPICE trace -->
+        <polyline points="720,250 660,250 660,240 530,240" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+
+        <!-- Trace junction dots -->
+        <circle cx="280" cy="165" r="3" fill="#d4af37" opacity=".8"/>
+        <circle cx="280" cy="220" r="3" fill="#d4af37" opacity=".8"/>
+        <circle cx="290" cy="240" r="3" fill="#d4af37" opacity=".8"/>
+        <circle cx="580" cy="190" r="3" fill="#d4af37" opacity=".8"/>
+        <circle cx="580" cy="220" r="3" fill="#d4af37" opacity=".8"/>
+        <circle cx="660" cy="240" r="3" fill="#d4af37" opacity=".8"/>
+
+        <!-- Resistor symbols on some traces -->
+        <!-- R1 on C trace -->
+        <rect x="215" y="184" width="30" height="12" rx="2" fill="#0a2915" stroke="rgba(212,175,55,.6)" stroke-width="1.2"/>
+        <text x="230" y="193" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7" fill="rgba(212,175,55,.7)">R1</text>
+        <!-- R2 on Python -->
+        <rect x="215" y="134" width="30" height="12" rx="2" fill="#0a2915" stroke="rgba(212,175,55,.6)" stroke-width="1.2"/>
+        <text x="230" y="143" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7" fill="rgba(212,175,55,.7)">R2</text>
+        <!-- R3 on Verilog -->
+        <rect x="615" y="159" width="30" height="12" rx="2" fill="#0a2915" stroke="rgba(212,175,55,.6)" stroke-width="1.2"/>
+        <text x="630" y="168" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7" fill="rgba(212,175,55,.7)">R3</text>
+
+        <!-- ── SKILL NODES (left side) ── -->
+        <!-- C -->
+        <g class="skill-node" id="node-c">
+          <circle class="node-circle" cx="100" cy="190" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="100" cy="190" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="100" y="186" text-anchor="middle" font-family="'Orbitron'" font-size="15" fill="#d4af37" font-weight="700">C</text>
+          <text x="100" y="200" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">EXPERT</text>
+          <line x1="100" y1="40" x2="100" y2="154" stroke="rgba(212,175,55,.2)" stroke-width="1"/>
+          <line x1="100" y1="226" x2="100" y2="340" stroke="rgba(212,175,55,.2)" stroke-width="1"/>
+        </g>
+        <!-- Python -->
+        <g class="skill-node" id="node-py">
+          <circle class="node-circle" cx="100" cy="100" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="100" cy="100" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="100" y="97" text-anchor="middle" font-family="'Orbitron'" font-size="9" fill="#d4af37" font-weight="700">PYTHON</text>
+          <text x="100" y="110" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">ADVANCED</text>
+        </g>
+        <!-- MATLAB -->
+        <g class="skill-node" id="node-mat">
+          <circle class="node-circle" cx="100" cy="270" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="100" cy="270" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="100" y="267" text-anchor="middle" font-family="'Orbitron'" font-size="9" fill="#d4af37" font-weight="700">MATLAB</text>
+          <text x="100" y="280" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">PROFICIENT</text>
+        </g>
+        <!-- KiCAD -->
+        <g class="skill-node" id="node-kicad">
+          <circle class="node-circle" cx="100" cy="340" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="100" cy="340" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="100" y="337" text-anchor="middle" font-family="'Orbitron'" font-size="9" fill="#d4af37" font-weight="700">KiCAD</text>
+          <text x="100" y="350" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">DESIGNING</text>
+        </g>
+
+        <!-- ── SKILL NODES (right side) ── -->
+        <!-- Verilog -->
+        <g class="skill-node" id="node-ver">
+          <circle class="node-circle" cx="760" cy="140" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="760" cy="140" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="760" y="137" text-anchor="middle" font-family="'Orbitron'" font-size="9" fill="#d4af37" font-weight="700">VERILOG</text>
+          <text x="760" y="150" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">LEARNING</text>
+          <line x1="760" y1="40" x2="760" y2="104" stroke="rgba(212,175,55,.2)" stroke-width="1"/>
+        </g>
+        <!-- Git -->
+        <g class="skill-node" id="node-git">
+          <circle class="node-circle" cx="760" cy="210" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="760" cy="210" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="760" y="207" text-anchor="middle" font-family="'Orbitron'" font-size="12" fill="#d4af37" font-weight="700">GIT</text>
+          <text x="760" y="220" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">PROFICIENT</text>
+        </g>
+        <!-- Linux -->
+        <g class="skill-node" id="node-linux">
+          <circle class="node-circle" cx="760" cy="280" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="760" cy="280" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="760" y="277" text-anchor="middle" font-family="'Orbitron'" font-size="9.5" fill="#d4af37" font-weight="700">LINUX</text>
+          <text x="760" y="290" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">DAILY USE</text>
+          <line x1="760" y1="316" x2="760" y2="340" stroke="rgba(212,175,55,.2)" stroke-width="1"/>
+        </g>
+        <!-- SPICE -->
+        <g class="skill-node" id="node-spice">
+          <circle class="node-circle" cx="760" cy="340" r="36" fill="#0f3d1c" stroke="#d4af37" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="760" cy="340" r="28" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="760" y="337" text-anchor="middle" font-family="'Orbitron'" font-size="9" fill="#d4af37" font-weight="700">SPICE</text>
+          <text x="760" y="350" text-anchor="middle" font-family="'Share Tech Mono'" font-size="7.5" fill="rgba(240,244,240,.6)" letter-spacing="1">SIMULATING</text>
+        </g>
+
+        <!-- capacitor symbols -->
+        <line x1="425" y1="60" x2="425" y2="76" stroke="rgba(212,175,55,.5)" stroke-width="1.5"/>
+        <line x1="415" y1="76" x2="435" y2="76" stroke="rgba(212,175,55,.7)" stroke-width="2"/>
+        <line x1="415" y1="80" x2="435" y2="80" stroke="rgba(212,175,55,.7)" stroke-width="2"/>
+        <line x1="425" y1="80" x2="425" y2="96" stroke="rgba(212,175,55,.5)" stroke-width="1.5"/>
+        <text x="440" y="82" font-family="'Share Tech Mono'" font-size="8" fill="rgba(212,175,55,.5)">C1</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ INTERESTS ══════════════════════════ -->
+<section id="interests">
+  <div class="container">
+    <p class="section-label reveal">// SECTION_03</p>
+    <h2 class="section-title reveal">Interests</h2>
+    <div class="section-rule reveal"></div>
+    <div class="interests-grid stagger">
+
+      <div class="interest-card">
+        <div class="ic-label">INT_0x01 ► DOMAIN</div>
+        <div class="ic-icon">🔬</div>
+        <div class="ic-title">VLSI Design</div>
+        <div class="ic-desc">
+          Fascinated by very-large-scale integration — from transistor-level MOSFET physics 
+          to full-chip floorplanning. Interested in low-power CMOS digital design and 
+          exploring node shrinks below 7nm.
+        </div>
+        <div class="trace-deco">0xFF ── ─── ── 0x00</div>
+      </div>
+
+      <div class="interest-card">
+        <div class="ic-label">INT_0x02 ► DOMAIN</div>
+        <div class="ic-icon">📡</div>
+        <div class="ic-title">Internet of Things</div>
+        <div class="ic-desc">
+          Building connected, sensor-driven systems using microcontrollers (ESP32, STM32) 
+          with MQTT/CoAP protocols. Passionate about edge inference and ultra-low-power 
+          wireless design for IoT nodes.
+        </div>
+        <div class="trace-deco">SDA ──┤ SCL ──┤ INT</div>
+      </div>
+
+      <div class="interest-card">
+        <div class="ic-label">INT_0x03 ► DOMAIN</div>
+        <div class="ic-icon">🔋</div>
+        <div class="ic-title">Battery Management Systems</div>
+        <div class="ic-desc">
+          Deep interest in BMS architecture — cell balancing, SOC/SOH estimation, thermal 
+          protection circuits, and the power electronics behind Li-ion and LiFePO₄
+          battery packs for EVs and portable devices.
+        </div>
+        <div class="trace-deco">VCC ─── PWM ─── GND</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PROJECTS ════════════════════════════ -->
+<section id="projects">
+  <div class="container">
+    <p class="section-label reveal">// SECTION_04</p>
+    <h2 class="section-title reveal">Projects — Datasheet View</h2>
+    <div class="section-rule reveal"></div>
+    <div class="projects-grid stagger">
+
+      <!-- CARD 1 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-001 / BMS-LITE</span>
+          <span class="card-rev">REV A</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">🔋</div>
+          <div class="card-title">Lithium BMS Prototype</div>
+          <div class="card-desc">
+            A 4S Li-ion battery management system featuring passive cell balancing, 
+            over-voltage/under-voltage protection, and I²C state-of-charge reporting 
+            to a host microcontroller. Designed in KiCAD, fabricated via JLCPCB.
+          </div>
+          <div class="card-tags">
+            <span class="tag">KiCAD</span>
+            <span class="tag">C</span>
+            <span class="tag">I²C</span>
+            <span class="tag">Li-ion</span>
+            <span class="tag">STM32</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span> OPERATIONAL — PCB v1.2
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">Vout: 14.8V | 5A max</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+      <!-- CARD 2 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-002 / ENV-NODE</span>
+          <span class="card-rev">REV B</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">📡</div>
+          <div class="card-title">IoT Environmental Node</div>
+          <div class="card-desc">
+            ESP32-based wireless sensor node measuring temperature, humidity, CO₂, 
+            and particulate matter. Data published via MQTT to a Raspberry Pi broker 
+            with a real-time Grafana dashboard. Solar-charged.
+          </div>
+          <div class="card-tags">
+            <span class="tag">ESP32</span>
+            <span class="tag">Python</span>
+            <span class="tag">MQTT</span>
+            <span class="tag">SPICE</span>
+            <span class="tag">IoT</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot yellow"></span> IN TESTING — FW v0.9
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">VCC: 3.3V | BLE+WiFi</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+      <!-- CARD 3 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-003 / VLSI-ALU</span>
+          <span class="card-rev">REV —</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">🔬</div>
+          <div class="card-title">8-Bit CMOS ALU</div>
+          <div class="card-desc">
+            A full 8-bit Arithmetic Logic Unit designed at the transistor level in 
+            Verilog, simulated with ModelSim. Includes ADD, SUB, AND, OR, XOR and 
+            barrel shift operations with carry-lookahead for minimal propagation delay.
+          </div>
+          <div class="card-tags">
+            <span class="tag">Verilog</span>
+            <span class="tag">MATLAB</span>
+            <span class="tag">VLSI</span>
+            <span class="tag">CMOS</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot dim"></span> SIMULATION COMPLETE
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">Fmax: 250MHz | 180nm</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+      <!-- CARD 4 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-004 / PWR-CTRL</span>
+          <span class="card-rev">REV A</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">⚡</div>
+          <div class="card-title">Buck Converter Design</div>
+          <div class="card-desc">
+            Synchronous buck converter stepping 12V → 3.3V at 2A with 93% efficiency. 
+            Designed using LTspice SPICE simulation before PCB layout. 
+            Features PWM feedback loop and soft-start circuitry.
+          </div>
+          <div class="card-tags">
+            <span class="tag">SPICE</span>
+            <span class="tag">KiCAD</span>
+            <span class="tag">Power</span>
+            <span class="tag">PWM</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span> HARDWARE VERIFIED
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">η: 93% | fsw: 400kHz</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+      <!-- CARD 5 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-005 / UART-DBG</span>
+          <span class="card-rev">REV C</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">💻</div>
+          <div class="card-title">UART Debug Console</div>
+          <div class="card-desc">
+            Bare-metal C firmware for STM32 implementing a UART command-line interface 
+            for real-time register inspection, GPIO toggling, and I²C device scanning — 
+            no OS required. Ported to 3 MCU families.
+          </div>
+          <div class="card-tags">
+            <span class="tag">C</span>
+            <span class="tag">STM32</span>
+            <span class="tag">UART</span>
+            <span class="tag">Bare-metal</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span> PRODUCTION READY
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">Baud: 115200 | ARM CM4</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+      <!-- CARD 6 -->
+      <div class="project-card">
+        <div class="card-pins">
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div><div class="pin"></div><div class="pin"></div>
+          <div class="pin"></div>
+        </div>
+        <div class="card-pins-right">
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div><div class="pin-r"></div><div class="pin-r"></div>
+          <div class="pin-r"></div>
+        </div>
+        <div class="card-header-bar">
+          <span class="card-part-num">PRJ-006 / DSP-FILT</span>
+          <span class="card-rev">REV A</span>
+        </div>
+        <div class="card-body">
+          <div class="card-chip-icon">〰️</div>
+          <div class="card-title">MATLAB DSP Filter Suite</div>
+          <div class="card-desc">
+            A collection of FIR/IIR filter designs implemented in MATLAB with 
+            frequency analysis, pole-zero plots, and step response visualization. 
+            Includes a real-time audio equalizer prototype using Simulink.
+          </div>
+          <div class="card-tags">
+            <span class="tag">MATLAB</span>
+            <span class="tag">DSP</span>
+            <span class="tag">Simulink</span>
+            <span class="tag">FIR/IIR</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot yellow"></span> ONGOING RESEARCH
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="mono" style="font-size:.65rem;color:rgba(212,175,55,.4)">fs: 48kHz | N=64 taps</span>
+          <a href="#" class="card-link">VIEW →</a>
+        </div>
+      </div>
+
+    </div><!-- /projects-grid -->
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ CONTACT ═════════════════════════════ -->
+<section id="contact">
+  <div class="container">
+    <p class="section-label reveal" style="text-align:center">// SECTION_05</p>
+    <h2 class="section-title reveal" style="text-align:center">Let's Connect</h2>
+    <div class="section-rule reveal" style="margin:0 auto 3rem;"></div>
+    <div class="contact-wrap reveal">
+      <p>
+        Whether you're looking to collaborate on a hardware project, discuss VLSI research, 
+        or just talk embedded systems — my inbox is always open. I'm actively seeking 
+        <span style="color:var(--gold)">internships</span> and <span style="color:var(--gold)">research positions</span> 
+        for Summer 2026.
+      </p>
+      <div class="contact-links">
+        <a href="mailto:alex.rivera@university.edu" class="contact-link">
+          <span>✉</span> EMAIL
+        </a>
+        <a href="https://linkedin.com" target="_blank" class="contact-link">
+          <span>in</span> LINKEDIN
+        </a>
+        <a href="https://github.com" target="_blank" class="contact-link">
+          <span>⌥</span> GITHUB
+        </a>
+        <a href="#" class="contact-link">
+          <span>⬇</span> RESUME
+        </a>
+      </div>
+    </div>
+
+    <!-- Contact Form -->
+    <form class="contact-form reveal" onsubmit="handleForm(event)">
+      <div class="cf-row">
+        <input class="cf-input" type="text" placeholder="NAME" required />
+        <input class="cf-input" type="email" placeholder="EMAIL" required />
+      </div>
+      <input class="cf-input" type="text" placeholder="SUBJECT" />
+      <textarea class="cf-input" placeholder="MESSAGE"></textarea>
+      <button class="cf-submit" type="submit">TRANSMIT →</button>
+    </form>
+    <p id="form-msg" class="mono" style="text-align:center;margin-top:1rem;font-size:.8rem;color:var(--gold);display:none;">
+      ✓ MESSAGE QUEUED — Transmission successful.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ FOOTER ══════════════════════════════ -->
+<footer>
+  <span>// EE '29</span> — Alex Rivera · Embedded Systems & Hardware Design ·
+  Built with <span>HTML/CSS/JS</span> · PCB Schematic Theme ·
+  <span>© 2025</span>
+</footer>
+
+<!-- ═══════════════════════════════ SCRIPTS ═════════════════════════════ -->
+<script>
+  /* ── NAV TOGGLE ──────────────────────────────────────── */
+  function toggleNav() {
+    document.getElementById('nav-list').classList.toggle('open');
+  }
+  // close on link click
+  document.querySelectorAll('#nav-list a').forEach(a => {
+    a.addEventListener('click', () => {
+      document.getElementById('nav-list').classList.remove('open');
+    });
+  });
+
+  /* ── PARTICLES ───────────────────────────────────────── */
+  (function spawnParticles() {
+    const wrap = document.getElementById('particles');
+    const count = 22;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left   = Math.random() * 100 + '%';
+      p.style.top    = Math.random() * 100 + '%';
+      p.style.setProperty('--dur',   (6 + Math.random() * 8) + 's');
+      p.style.setProperty('--delay', (Math.random() * 5) + 's');
+      p.style.width  = (2 + Math.random() * 3) + 'px';
+      p.style.height = p.style.width;
+      wrap.appendChild(p);
+    }
+  })();
+
+  /* ── SCROLL REVEAL ───────────────────────────────────── */
+  const revealEls = document.querySelectorAll(
+    '.reveal, .reveal-left, .reveal-right, .stagger'
+  );
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => observer.observe(el));
+
+  /* ── ACTIVE NAV HIGHLIGHT ────────────────────────────── */
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const navObs   = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.style.color = '');
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.style.color = 'var(--gold)';
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => navObs.observe(s));
+
+  /* ── SKILL NODE HOVER GLOW ───────────────────────────── */
+  document.querySelectorAll('.skill-node').forEach(node => {
+    const circle = node.querySelector('.node-circle');
+    const origStroke = '#d4af37';
+    node.addEventListener('mouseenter', () => {
+      circle.setAttribute('stroke-width', '3');
+      circle.setAttribute('fill', '#1a5c2a');
+    });
+    node.addEventListener('mouseleave', () => {
+      circle.setAttribute('stroke-width', '2');
+      circle.setAttribute('fill', '#0f3d1c');
+    });
+  });
+
+  /* ── TYPEWRITER ──────────────────────────────────────── */
+  (function typewriter() {
+    const lines = [
+      'EE \'29 | Embedded Systems & Hardware Design',
+      'PCB Designer | KiCAD & Altium',
+      'Firmware Engineer | C / RTOS',
+      'VLSI Enthusiast | CMOS Logic',
+      'BMS & Power Electronics Explorer',
+    ];
+    let li = 0, ci = 0, deleting = false;
+    const el = document.getElementById('hero-sub');
+    function tick() {
+      const cur = lines[li];
+      const cursor = '<span class="cursor">_</span>';
+      if (!deleting) {
+        ci++;
+        el.innerHTML = cur.slice(0, ci) + cursor;
+        if (ci === cur.length) { deleting = true; setTimeout(tick, 2200); return; }
+        setTimeout(tick, 48);
+      } else {
+        ci--;
+        el.innerHTML = cur.slice(0, ci) + cursor;
+        if (ci === 0) {
+          deleting = false;
+          li = (li + 1) % lines.length;
+          setTimeout(tick, 400);
+          return;
+        }
+        setTimeout(tick, 22);
+      }
+    }
+    setTimeout(tick, 1200);
+  })();
+
+  /* ── FORM HANDLER ────────────────────────────────────── */
+  function handleForm(e) {
+    e.preventDefault();
+    const msg = document.getElementById('form-msg');
+    msg.style.display = 'block';
+    e.target.reset();
+    setTimeout(() => { msg.style.display = 'none'; }, 5000);
+  }
+
+  /* ── SMOOTH NAV SCROLL ───────────────────────────────── */
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  /* ── PCB TRACE ANIMATION: pulse gold glow along traces ─ */
+  (function tracePulse() {
+    const lines = document.querySelectorAll('.circuit-svg polyline, .circuit-svg line');
+    lines.forEach((l, i) => {
+      const len = 200;
+      l.style.strokeDasharray = len;
+      l.style.strokeDashoffset = len;
+      l.style.transition = `stroke-dashoffset ${1.2 + i * 0.08}s ease ${i * 0.06}s`;
+    });
+    // Trigger after a moment
+    setTimeout(() => {
+      lines.forEach(l => { l.style.strokeDashoffset = '0'; });
+    }, 600);
+  })();
+</script>
+</body>
+</html>
